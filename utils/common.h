@@ -1,9 +1,40 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+
+#include 	<stdio.h>
+#include 	<stdlib.h>
+#include	<unistd.h>
+#include 	<sys/stat.h>
+#include 	<sys/types.h>
+
+#include	<sys/types.h>	
+#include	<sys/socket.h>	
+#include	<sys/time.h>	
+#include	<time.h>		
+
+#include	<sys/time.h>	
+#include	<netinet/in.h>	
+#include	<arpa/inet.h>	
+#include	<errno.h>
+#include	<fcntl.h>		
+#include	<netdb.h>
+#include	<signal.h>
+#include	<stdio.h>
+#include	<stdlib.h>
+#include	<string.h>
+#include	<sys/stat.h>	
+#include	<sys/uio.h>		
+#include	<unistd.h>
+#include	<sys/wait.h>
+#include	<sys/un.h>		
+#include	<sys/select.h>	
+#include	<sys/sysctl.h>
+#include	<poll.h>	
+#include	<strings.h>		
+#include	<sys/ioctl.h>
+#include	<pthread.h>
+
 
 #undef TRUE
 #undef FALSE
@@ -15,6 +46,14 @@
 
 
 #define dbg_printf(fmt,arg...)		do{if(DBG_ON)fprintf(stderr,FILE_NAME"%s(line=%d)->"fmt,__FUNCTION__,__LINE__,##arg);}while(0)
+
+
+#define NETLIB_LITTLE_ENDIAN		(0x01)
+#define NETLIB_BIG_ENDIAN			(0x02) 
+
+int  netlib_gethost_byteorder(void);
+int netlib_sock_pton(char * net_addres, struct sockaddr *sa);
+char * netlib_sock_ntop(struct sockaddr *sa);
 
 
 #endif /*_COMMON_H*/
