@@ -67,7 +67,7 @@ int main(void)
 
 
 
-#if 1
+#if 0
 	
 	struct sockaddr_in test;
 	int ret = -1;
@@ -80,6 +80,12 @@ int main(void)
 		if(NULL != addres)
 			dbg_printf("the addres is %s\n",addres);
 	}
+
+#endif
+
+
+#if 1
+	dbg_printf("the listen max is %d \n",netlib_get_listen_max());
 
 #endif
 

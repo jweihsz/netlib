@@ -54,6 +54,10 @@
 int  netlib_gethost_byteorder(void);
 int netlib_sock_pton(char * net_addres, struct sockaddr *sa);
 char * netlib_sock_ntop(struct sockaddr *sa);
+int netlib_get_listen_max(void);
+int netlib_getsock_name(int sock_fd,struct sockaddr * sa);
+int netlib_getpeer_name(int sock_fd,struct sockaddr * peer);
+
 
 
 #endif /*_COMMON_H*/
