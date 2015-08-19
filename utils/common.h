@@ -57,6 +57,8 @@ char * netlib_sock_ntop(struct sockaddr *sa);
 int netlib_get_listen_max(void);
 int netlib_getsock_name(int sock_fd,struct sockaddr * sa);
 int netlib_getpeer_name(int sock_fd,struct sockaddr * peer);
+ssize_t netlib_writen(int fd, const void *vptr, size_t n);
+int netlib_signal(int signo, void (*func)(int));
 
 
 

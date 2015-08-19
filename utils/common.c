@@ -328,4 +328,21 @@ int netlib_getpeer_name(int sock_fd,struct sockaddr * peer)
 
 
 
+int netlib_signal(int signo, void (*func)(int))
+{
+	struct sigaction	act, oact;
+	act.sa_handler = func;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	if (signo == SIGALRM) 
+		act.sa_flags |= SA_RESTART;	
+	if (sigaction(signo, &act, &oact) < 0)
+		return(-1);
+	
+	return(0);
+}
+
+
+
+
 
