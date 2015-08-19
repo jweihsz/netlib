@@ -48,6 +48,11 @@
 #define dbg_printf(fmt,arg...)		do{if(DBG_ON)fprintf(stderr,FILE_NAME"%s(line=%d)->"fmt,__FUNCTION__,__LINE__,##arg);}while(0)
 
 
+#define	min(a,b)	((a) < (b) ? (a) : (b))
+#define	max(a,b)	((a) > (b) ? (a) : (b))
+
+
+
 #define NETLIB_LITTLE_ENDIAN		(0x01)
 #define NETLIB_BIG_ENDIAN			(0x02) 
 

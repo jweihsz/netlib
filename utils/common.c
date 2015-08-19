@@ -8,6 +8,9 @@
 #define FILE_NAME 	"common:"
 
 
+
+
+
 int em_isdir(const char * path)
 {
 	int ret = -1;
