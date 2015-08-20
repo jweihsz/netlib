@@ -345,10 +345,15 @@ int netlib_signal(int signo, void (*func)(int))
 	return(0);
 }
 
-static void netlib__sigchild_handler(int signo)
+void netlib__sigchild_handler(int signo)
 {
     while (waitpid(-1, NULL, WNOHANG) > 0) {};
 }
+
+
+
+
+
 
 
 

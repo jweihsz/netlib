@@ -16,3 +16,6 @@ all:
 
 01_udp_server:
 	gcc -o  01_udp_server -I./utils ./test/01_udp_server.c ./utils/common.c  -lpthread
+
+03_udp_time_sync:
+	gcc -o  03_udp_time_sync  -I./utils ./test/03_udp_time_sync.c ./utils/common.c  -lpthread
