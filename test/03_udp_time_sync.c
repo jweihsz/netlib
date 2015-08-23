@@ -150,13 +150,3 @@ int main(int argc, char **argv)
 }
 
 
-
-
-/*./03_udp_time_sync  time.nist.gov   daytime */
-
-/*
-time.nist.gov
-date -s "2008-08-08 12:00:00"
-
-
-*/
