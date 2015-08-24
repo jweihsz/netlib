@@ -84,8 +84,14 @@ int main(void)
 #endif
 
 
-#if 1
+#if 0
 	dbg_printf("the listen max is %d \n",netlib_get_listen_max());
+
+#endif
+
+
+#if 1
+	netlib_new_unix_socket("/tmp/hello");
 
 #endif
 
