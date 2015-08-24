@@ -20,8 +20,14 @@ all:
 03_udp_time_sync:
 	gcc -o  03_udp_time_sync  -I./utils ./test/03_udp_time_sync.c ./utils/common.c  -lpthread
 
-04_unix_server:
-	gcc -o  04_unix_server  -I./utils ./test/04_unix_server.c ./utils/common.c  -lpthread
+04_unix_tcp_server:
+	gcc -o  04_unix_tcp_server  -I./utils ./test/04_unix_tcp_server.c ./utils/common.c  -lpthread
 
-04_unix_cli:
-	gcc -o  04_unix_cli  -I./utils ./test/04_unix_cli.c ./utils/common.c  -lpthread
+04_unix_tcp_cli:
+	gcc -o  04_unix_tcp_cli  -I./utils ./test/04_unix_tcp_cli.c ./utils/common.c  -lpthread
+
+04_unix_udp_server:
+	gcc -o  04_unix_udp_server  -I./utils ./test/04_unix_udp_server.c ./utils/common.c  -lpthread
+
+04_unix_udp_cli:
+	gcc -o  04_unix_udp_cli  -I./utils ./test/04_unix_udp_cli.c ./utils/common.c  -lpthread
