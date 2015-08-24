@@ -470,9 +470,18 @@ int netlib_connect_nonb(int sockfd, const struct sockaddr *saptr, socklen_t sale
 
 	if (FD_ISSET(sockfd, &rset) || FD_ISSET(sockfd, &wset)) 
 	{
+		#if 0
 		len = sizeof(error);
 		if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) /*利用该函数来获取真正的错误码*/
-			return(-1);			/* Solaris pending error */
+			return(-1);	
+		#else
+			char check_buff[2];
+			if(read(sockfd,check_buff,0) != 0 )
+			{
+				return(-1);
+			}
+		
+		#endif
 	}
 	else
 		dbg_printf("select error: sockfd not set\n");
