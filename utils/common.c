@@ -352,6 +352,87 @@ void netlib__sigchild_handler(int signo)
 
 
 
+/*
+//it is suit able for tcp and udp
+//error==-1  0==timeout  right
+
+*/
+int netlib_readable_timeout(int fd,int sec)
+{
+	if(fd < 0)
+	{
+		dbg_printf("please check the socket\n");
+		return(-1);
+	}
+	fd_set			rset;
+	struct timeval	tv;
+	FD_ZERO(&rset);
+	FD_SET(fd, &rset);
+	tv.tv_sec = sec;
+	tv.tv_usec = 0;
+	return(select(fd+1, &rset, NULL, NULL, &tv));
+ 
+}
+
+
+
+
+
+int netlib_writeable_timeout(int fd, int sec)
+{
+	if(fd < 0)
+	{
+		dbg_printf("please check the socket\n");
+		return(-1);
+	}
+	fd_set			wset;
+	struct timeval	tv;
+	FD_ZERO(&wset);
+	FD_SET(fd, &wset);
+	tv.tv_sec = sec;
+	tv.tv_usec = 0;
+	return(select(fd+1, NULL, &wset, NULL, &tv));
+}
+
+
+
+
+int netlib_new_unix_socket(char * unix_sock_path)
+{
+	int  sockfd =  -1;
+	int ret = -1;
+	struct sockaddr_un	addr;
+	
+	unlink(unix_sock_path);
+	
+	sockfd = socket(AF_LOCAL, SOCK_STREAM, 0);
+	if(sockfd < 0 )
+	{
+		dbg_printf("socket  fail \n");
+		goto out;
+	}
+	bzero(&addr, sizeof(addr));
+	addr.sun_family = AF_LOCAL;
+	strncpy(addr.sun_path, unix_sock_path, sizeof(addr.sun_path)-1);
+	ret = bind(sockfd, (struct sockaddr *) &addr, SUN_LEN(&addr));
+	if(ret < 0 )
+	{
+		dbg_printf("bind fail \n");
+		goto out;
+	}
+
+	return(sockfd);
+
+out:
+
+	if(sockfd > 0 )
+	{
+		close(sockfd);
+	}
+
+	return(-1);
+}
+
 
 
 
