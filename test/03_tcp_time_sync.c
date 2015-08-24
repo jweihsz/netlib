@@ -1,12 +1,30 @@
 #include "common.h"
 
-#undef MAXLINE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>	
+#include <sys/time.h>	
+#include <time.h>		
+
+#include <sys/time.h>	
+#include <netinet/in.h>	
+#include <arpa/inet.h>	
+#include <errno.h>
+#include <fcntl.h>		
+#include <netdb.h>
+#include "huiwei_common.h"
+#include "anyka_com.h"
+
+
+#undef  MAXLINE
 #define MAXLINE   1024
 
 #undef  	DBG_ON
 #undef  	FILE_NAME
 #define 	DBG_ON  		(0x01)
-#define 	FILE_NAME 	"01_udp_time_sync:"
+#define 	FILE_NAME 	"huiwei_sync_time:"
 
 
 #define  TIME_SERVCE_NAME	"time.nist.gov"
@@ -27,7 +45,7 @@ typedef struct sync_time
 static sync_time_t * huiwei_time = NULL;
 
 
-static int time_tcp_connect(const char *host, const char *serv)
+static int huiwei_time_connect(const char *host, const char *serv)
 {
 	int				sockfd, n;
 	struct addrinfo	hints, *res, *ressave;
@@ -61,8 +79,10 @@ static int time_tcp_connect(const char *host, const char *serv)
 
 
 
-static int time_sync_clock(char * time_data )
+static int huiwei_time_set(char * time_data )
 {
+
+	int count = -1;
 	if(NULL == time_data)
 	{
 		dbg_printf("time_data is null \n");
@@ -71,21 +91,29 @@ static int time_sync_clock(char * time_data )
 	sync_time_t * timedata =huiwei_time;
 	if(NULL == timedata)return(-1);
 	
-	int data[6];
-	memset(data,0,6*sizeof(int));
-	
-	sscanf(time_data,"%*s%*[^0-9]%2d-%2d-%2d%*[^0-9]%2d:%2d:%2d",&data[0],&data[1],&data[2],&data[3],&data[4],&data[5]);
-	int i = 0;
-	for(i=0;i<6;++i)
+	count = sscanf(time_data,"%*s%*[^0-9]%2d-%2d-%2d%*[^0-9]%2d:%2d:%2d",&timedata->year,&timedata->month,&timedata->date,&timedata->hour,&timedata->minute,&timedata->seconds);
+	if(count != 6)
 	{
-		dbg_printf("%d \n",data[i]);
+		dbg_printf("get time data fail\n");
+		return(-2);
 	}
+	timedata->year +=  2000;
+
+	char buff[128];
+	memset(buff,'\0',128);
+	snprintf(buff,128,"date -s \"%2d-%2d-%2d  %2d:%2d:%2d\" ",timedata->year,timedata->month,timedata->date,timedata->hour,timedata->minute,timedata->seconds);
+	system(buff);
+	sleep(1);
+	system(" hwclock -w ");
+	sleep(1);
+	
+	
 	/*57254 15-08-20 15:25:18 50 0 0 507.2 UTC(NIST) * */
 
 	return(0);
 }
 
-void * time_fun(void * arg )
+void * huiwei_time_fun(void * arg )
 {
 	int run_flag = -1;
 	int res = -1;
@@ -99,7 +127,9 @@ void * time_fun(void * arg )
 	run_flag = 1;
 	while(run_flag)
 	{
-		sockfd = time_tcp_connect(TIME_SERVCE_NAME, TIME_PORT_NAME);
+
+retry:
+		sockfd = huiwei_time_connect(TIME_SERVCE_NAME, TIME_PORT_NAME);
 		if(sockfd < 0 )
 		{
 			if(-2 == sockfd)
@@ -114,19 +144,35 @@ void * time_fun(void * arg )
 		}
 		while ( (n = read(sockfd, recvline, MAXLINE)) > 0)
 		{
-			dbg_printf("%s \n",recvline);
 			recvline[n] = 0;
-			time_sync_clock(recvline);
-			run_flag = 0;
-			break;
+			res = huiwei_time_set(recvline);
+			if(0 == res )
+			{
+				run_flag = 0;
+				break;
+			}
+			else
+			{
+				sleep(1);
+				close(sockfd);
+				memset(time_data,0,sizeof(*time_data));
+				goto retry;
+			}
+
 		}
 		
 	}
-
+	close(sockfd);
+	if(NULL != time_data)
+	{
+		free(time_data);
+		time_data = NULL;
+	}
+	
 
 }
 
-int main(int argc, char **argv)
+int huiwei_time_sync(void)
 {
 	if(NULL  != huiwei_time)
 	{
@@ -141,12 +187,10 @@ int main(int argc, char **argv)
 	}
 	
 	pthread_t time_pid;
-	pthread_create(&time_pid, NULL, time_fun, huiwei_time);
-	while(1)
-	{
-
-		sleep(2);
-	}
+	anyka_pthread_create(&time_pid, huiwei_time_fun, (void *)huiwei_time,200*1024, -1);
+	pthread_detach(time_pid);
+	return(0);
+		
 }
 
 
