@@ -31,3 +31,8 @@ all:
 
 04_unix_udp_cli:
 	gcc -o  04_unix_udp_cli  -I./utils ./test/04_unix_udp_cli.c ./utils/common.c  -lpthread
+
+05_ping:
+	gcc -o  05_ping  -I./utils ./test/05_ping.c ./utils/common.c  -lpthread
+
+

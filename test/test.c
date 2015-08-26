@@ -90,8 +90,19 @@ int main(void)
 #endif
 
 
-#if 1
+#if 0
 	netlib_new_unix_socket("/tmp/hello");
+
+#endif
+
+#if 1
+	struct addrinfo	*ai;
+	ai = netlib_get_addrinfo("www.baidu.com", NULL, 0, 0);
+	if(NULL != ai)
+	{
+		dbg_printf("the addres is %s \n",netlib_sock_ntop(ai->ai_addr));
+		
+	}
 
 #endif
 
