@@ -34,7 +34,7 @@
 #include	<strings.h>		
 #include	<sys/ioctl.h>
 #include	<pthread.h>
-
+#include 	<sys/resource.h>
 
 #undef TRUE
 #undef FALSE
@@ -65,6 +65,7 @@ int netlib_getpeer_name(int sock_fd,struct sockaddr * peer);
 ssize_t netlib_writen(int fd, const void *vptr, size_t n);
 int netlib_signal(int signo, void (*func)(int));
 int netlib_new_unix_socket(char * unix_sock_path);
-
+int netlib_get_openfile_max(void);
+int netlib_rand(int min,int max);
 
 #endif /*_COMMON_H*/

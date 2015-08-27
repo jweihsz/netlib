@@ -306,6 +306,16 @@ int netlib_get_listen_max(void)
 }
 
 
+int netlib_get_openfile_max(void)
+{
+	int ret = 0;
+	struct rlimit fileopen_limit;
+	ret = getrlimit(RLIMIT_NOFILE, &fileopen_limit);
+	if(ret < 0)return(0);
+
+	return(fileopen_limit.rlim_cur);
+}
+
 
 int netlib_getsock_name(int sock_fd,struct sockaddr * sa)
 {
@@ -373,6 +383,19 @@ int netlib_readable_timeout(int fd,int sec)
 	return(select(fd+1, &rset, NULL, NULL, &tv));
  
 }
+
+
+
+
+inline unsigned long netlib_hash_value(unsigned char *str)
+{
+    unsigned long hash = 5381;
+    int c;
+    while (c = *str++)
+        hash = ((hash << 5) + hash) + c;
+    return hash;
+}
+
 
 
 
@@ -512,6 +535,251 @@ struct addrinfo * netlib_get_addrinfo(const char *host, const char *serv, int fa
 		return(NULL);
 
 	return(res);
+}
+
+
+int  netlib_create_dir(const   char   *sPathName)  
+{  
+	char   DirName[256];  
+
+	int   i=0;
+	int len = 0 ;  
+	strcpy(DirName,   sPathName);  
+
+	if(DirName[len-1] !='/')  
+		strcat(DirName,   "/");    
+	len   =   strlen(DirName);  
+   
+	for(i=1;   i<len;   i++)  
+	{  
+		if(DirName[i]=='/')  
+		{  
+			DirName[i]   =   0;  
+			
+			if(access(DirName,   F_OK)!=0)  
+			{  
+				if(mkdir(DirName,   0755)==-1) 
+				{   
+					dbg_printf("create the dir fail \n");
+					return   -1;   
+				}  
+			}  
+			DirName[i]   =   '/';  
+		}  
+	}  
+  	return   0;  
+} 
+
+
+char * netlib_get_dirname(char * dirname)
+{
+	if(NULL == dirname)
+	{
+		dbg_printf("the parem is null\n");
+		return(NULL);
+	}
+	char * name_temp = strdup(dirname);
+	int length = strlen(name_temp);
+	if('/' == name_temp[length-1])
+	{
+		length -= 2;	
+	}
+
+    for (; length > 0; length--)
+    {
+        if ('/' == dirname[length])
+        {
+            dirname[length] = 0;
+            break;
+        }
+    }
+	return(dirname);
+}
+
+
+
+#define  WRITE_MAX_BYTE		(512)
+int netlib_write_data(int fd,char * data,int length)
+{
+	if(fd<0 || NULL == data)
+	{
+		dbg_printf("check the param \n");
+		return(-1);
+	}
+	int count = 0;
+	int write_byte = 0;
+	int n = 0;
+	while(count < length)
+	{
+		write_byte = length;
+		if(write_byte > WRITE_MAX_BYTE)write_byte = WRITE_MAX_BYTE;
+		n = write(fd,data,write_byte);
+		if(n > 0)
+		{
+			count += n;	
+			data += n;
+		}
+		else
+		{
+			dbg_printf("some thing wrong happened \n");
+			break;
+		}
+	}
+	return(0);
+}
+
+int netlib_read_data(int fd, void *buf, int len)
+{
+
+	int n = 0;
+	int count_bytes = 0;
+	while(n < len)
+	{
+		count_bytes = read(fd,buf+n,len);
+		if(count_bytes > 0 )
+		{
+			n += count_bytes;
+		}
+		else if(count_bytes < 0)
+		{
+            if (errno == EINTR)
+            {
+                continue;
+            }
+			else
+				break;
+		}
+
+	}
+
+	return (n);
+}
+
+	
+  
+
+
+int netlib_soft_rand(int min, int max)
+{
+
+	if(min >= max)
+	{
+		dbg_printf("please check the pram \n");
+		return(-1);
+	}
+	static int seed = 0;
+    if (seed == 0)
+    {
+        seed = time(NULL);
+        srand(seed);
+    }
+
+	int rand_value = (int)rand()%max;
+	if(rand_value < min)
+		return(min + rand_value);
+	return(rand_value);
+
+}
+
+
+int netlib_rand(int min,int max)
+{
+	static int dev_fd = -1;
+	static int ret = 1;
+	if(dev_fd == -1 )
+	{
+		dev_fd  = open("/dev/urandom", O_RDONLY);
+		if(dev_fd < 0 )
+		{
+			ret = 0;
+			dev_fd = 0;
+		}
+	}
+
+	unsigned int rand_value = 0;
+	if(ret == 0 )
+	{
+		return(netlib_soft_rand(min,max));	
+	}
+	else
+	{
+	    if (read(dev_fd, (char*)&rand_value, sizeof(rand_value)) < 0)
+	    	return(-1);
+	}
+	int return_value = rand_value%max;
+	if(rand_value < min)
+		return(min + rand_value);
+	
+	return(return_value);
+
+}
+
+
+long netlib_get_file_szie(FILE * fp)
+{
+	if(NULL == fp)return(0);
+	long pos = ftell(fp);
+	fseek(fp,0L,SEEK_END);
+	long size = ftell(fp);
+	fseek(fp,pos,SEEK_SET);
+	return(size);
+
+}
+
+
+
+int  netlib_ioctl_set_block(int sock,int nonblock)
+{
+	int ret = -1;
+	do
+	{
+		ret = ioctl(sock,FIONBIO,&nonblock);
+	}while(ret==-1 && errno==EINTR);
+
+	return(ret);
+
+}
+
+
+int netlib_fcntl_set_block(int sock,int nonblock)
+{
+
+	int value;
+	int ret = -1;
+	do
+	{
+		value = fcntl(sock,F_GETFL);
+	}while(value<0 && errno==EINTR);
+
+	if(value < 0)
+	{
+		dbg_printf("this is wrong to get \n");
+		return (-1);
+	}
+
+    if (nonblock)
+    {
+        value = value | O_NONBLOCK;
+    }
+    else
+    {
+        value = value & ~O_NONBLOCK;
+    }
+
+	do
+	{
+		ret = fcntl(sock,F_SETFL,value);
+		
+	}while(ret <0 && errno==EINTR );
+
+	if(ret <0)
+	{
+		dbg_printf("set the fanctl fail\n");
+		return(-2);
+	}
+	return(0);
+
+
 }
 
 

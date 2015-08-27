@@ -95,7 +95,7 @@ int main(void)
 
 #endif
 
-#if 1
+#if 0
 	struct addrinfo	*ai;
 	ai = netlib_get_addrinfo("www.baidu.com", NULL, 0, 0);
 	if(NULL != ai)
@@ -106,6 +106,20 @@ int main(void)
 
 #endif
 
+#if 0
+
+	dbg_printf("the open file num is %d \n",netlib_get_openfile_max());
+#endif
+
+
+#if 1
+	while(1)
+	{
+		dbg_printf("the rand value is %d \n",netlib_rand(0,100));
+		sleep(1);
+	}
+
+#endif
 
 	return(0);
 }
