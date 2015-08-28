@@ -38,4 +38,12 @@ all:
 ringqueue:
 	gcc -o  ringqueue  -I./utils ./test/ringqueue.c ./utils/common.c  -lpthread
 
+threadpool:
+	gcc -o  threadpool  -I./utils ./test/ringqueue.c  ./test/threadpool.c ./utils/common.c  -lpthread
+
+
+
+
+
+
 

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "ringqueue.h"
 #include <pthread.h>
 
 
@@ -10,21 +11,8 @@
 
 
 
-#define  compare_and_swap(lock,old,set)		__sync_bool_compare_and_swap(lock,old,set)
-#define  fetch_and_add(value,add)			__sync_fetch_and_add(value,add)
-#define	 fetch_and_sub(value,sub)			__sync_fetch_and_sub(value,sub)			
+		
 
-
-typedef struct ring_queue
-{
-	void **data;
-	char *flags;
-	unsigned int size;
-	unsigned int num;
-	unsigned int head;
-	unsigned int tail;
-
-} ring_queue_t;
 
 
 int ring_queue_init(ring_queue_t *queue, int buffer_size)
@@ -101,8 +89,6 @@ int  ring_queue_pop(ring_queue_t *queue, void **ele)
 
 ring_queue_t  test;
 
-
-
 void * fun_test(void * arg)
 {
 	
@@ -111,14 +97,14 @@ void * fun_test(void * arg)
 		char * a= calloc(1,sizeof(char));
 		a[0]='A';
 		dbg_printf("the id is %ld   begin\n",pthread_self());
-		ring_queue_push(&test,a);
+		ring_queue_push(&test,(void*)a);
 		dbg_printf("the id is %ld   end\n",pthread_self());
 		
 		sleep(1);
 
 		char * pchar  = NULL;
 		dbg_printf("the id is %ld     begin\n",pthread_self());
-		ring_queue_pop(&test,&pchar);
+		ring_queue_pop(&test,(void**)&pchar);
 		dbg_printf("the id is %ld   %c  end\n",pthread_self(),*pchar);
 
 		if(NULL != pchar)
@@ -132,7 +118,7 @@ void * fun_test(void * arg)
 
 
 
-
+#if 0
 int main(void )
 {
 	dbg_printf("this is a test for ringqueue\n");
@@ -151,10 +137,10 @@ int main(void )
 	while(1)
 	{
 		sleep(10);
-
-
 	}
 	
 	return(0);
 	
 }
+
+#endif
