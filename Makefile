@@ -41,6 +41,9 @@ ringqueue:
 threadpool:
 	gcc -o  threadpool  -I./utils ./test/ringqueue.c  ./test/threadpool.c ./utils/common.c  -lpthread
 
+pipe:
+	gcc -o  pipe  -I./utils ./test/pipe.c   ./utils/common.c  -lpthread
+
 
 
 

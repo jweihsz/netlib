@@ -786,5 +786,377 @@ int netlib_fcntl_set_block(int sock,int nonblock)
 
 
 
+int netlib_socket_wait(int fd, int timeout_ms, int events)
+{
+    struct pollfd event;
+    event.fd = fd;
+    event.events = 0;
+
+    if (events & EVENT_READ)
+    {
+        event.events |= POLLIN;
+    }
+    if (events & EVENT_WRITE)
+    {
+        event.events |= POLLOUT;
+    }
+    while (1)
+    {
+        int ret = poll(&event, 1, timeout_ms);
+        if (ret == 0)
+        {
+            return (-1);
+        }
+        else if (ret < 0 && errno != EINTR)
+        {
+            dbg_printf("poll() failed. Error: %s[%d]\n", strerror(errno), errno);
+            return (-2);
+        }
+        else
+        {
+            return (0);
+        }
+    }
+    return 0;
+}
+
+
+void netlib_clean(int fd, void *buf, int len)
+{
+    while (recv(fd, buf, len, MSG_DONTWAIT) > 0)
+        ;
+}
+
+
+int  netlib_sendfile(int out_fd, int in_fd, off_t *offset, size_t size)
+{
+    char buf[65536];
+    int readn = size > sizeof(buf) ? sizeof(buf) : size;
+
+    int ret;
+    int n = pread(in_fd, buf, readn, *offset);
+
+    if (n > 0)
+    {
+        ret = write(out_fd, buf, n);
+        if (ret < 0)
+        {
+            dbg_printf("write() failed.\n");
+        }
+        else
+        {
+            *offset += ret;
+        }
+        return ret;
+    }
+    else
+    {
+        dbg_printf("pread() failed.\n");
+        return (-1);
+    }
+
+	return(0);
+}
+
+int   netlib_sendfile_sync(int sock, char *filename, double timeout)
+{
+    int timeout_ms = timeout < 0 ? -1 : timeout * 1000;
+    int file_fd = open(filename, O_RDONLY);
+    if (file_fd < 0)
+    {
+        dbg_printf("open(%s) failed. Error: %s[%d]\n", filename, strerror(errno), errno);
+        return (-1);
+    }
+
+    struct stat file_stat;
+    if (fstat(file_fd, &file_stat) < 0)
+    {
+        dbg_printf("fstat() failed. Error: %s[%d]\n", strerror(errno), errno);
+        return (-1);
+    }
+
+    int n, sendn;
+    off_t offset = 0;
+    size_t file_size = file_stat.st_size;
+
+    while (offset < file_size)
+    {
+        if (netlib_socket_wait(sock, timeout_ms, EVENT_WRITE) < 0)
+        {
+            close(file_fd);
+            return (-1);
+        }
+        else
+        {
+            sendn = (file_size - offset > 65536) ? 65536 : file_size - offset;
+            n = netlib_sendfile(sock, file_fd, &offset, sendn);
+            if (n <= 0)
+            {
+                close(file_fd);
+               	dbg_printf("sendfile(%d, %s) failed.\n", sock, filename);
+                return (-2);
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+    close(file_fd);
+    return 0;
+}
+
+
+#define SW_WORKER_WAIT_TIMEOUT     1000
+int netlib_write_blocking(int __fd, void *__data, int __len)
+{
+    int n = 0;
+    int written = 0;
+
+    while (written < __len)
+    {
+        n = write(__fd, __data + written, __len - written);
+        if (n < 0)
+        {
+            if (errno == EINTR)
+            {
+                continue;
+            }
+            else if (errno == EAGAIN)
+            {
+                netlib_socket_wait(__fd, SW_WORKER_WAIT_TIMEOUT, EVENT_WRITE);
+                continue;
+            }
+            else
+            {
+                dbg_printf("write %d bytes failed.\n", __len);
+                return -1;
+            }
+        }
+        written += n;
+    }
+
+    return written;
+}
+
+
+
+int netlib_sendto_blocking(int fd, void *__buf, size_t __n, int flag, struct sockaddr *__addr, socklen_t __addr_len)
+{
+    int n = 0;
+
+    while (1)
+    {
+        n = sendto(fd, __buf, __n, flag, __addr, __addr_len);
+        if (n >= 0)
+        {
+            break;
+        }
+        else
+        {
+            if (errno == EINTR)
+            {
+                continue;
+            }
+            else if (errno == EAGAIN)
+            {
+                netlib_socket_wait(fd, 1000, EVENT_WRITE);
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+    return n;
+}
+
+
+int netlib_udp_sendto(int server_sock, char *dst_ip, int dst_port, char *data, uint32_t len)
+{
+    struct sockaddr_in addr;
+    if (inet_aton(dst_ip, &addr.sin_addr) == 0)
+    {
+        dbg_printf("ip[%s] is invalid.\n", dst_ip);
+        return (-1);
+    }
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(dst_port);
+    return netlib_sendto_blocking(server_sock, data, len, 0, (struct sockaddr *) &addr, sizeof(addr));
+}
+
+int swSocket_udp_sendto6(int server_sock, char *dst_ip, int dst_port, char *data, uint32_t len)
+{
+    struct sockaddr_in6 addr;
+    bzero(&addr, sizeof(addr));
+    if (inet_pton(AF_INET6, dst_ip, &addr.sin6_addr) < 0)
+    {
+        dbg_printf("ip[%s] is invalid.\n", dst_ip);
+        return (-1);
+    }
+    addr.sin6_port = (uint16_t) htons(dst_port);
+    addr.sin6_family = AF_INET6;
+    return netlib_sendto_blocking(server_sock, data, len, 0, (struct sockaddr *) &addr, sizeof(addr));
+}
+
+
+enum socket_type
+{
+    SW_SOCK_TCP          =  1,
+    SW_SOCK_UDP          =  2,
+    SW_SOCK_TCP6         =  3,
+    SW_SOCK_UDP6         =  4,
+    SW_SOCK_UNIX_DGRAM   =  5,  //unix sock dgram
+    SW_SOCK_UNIX_STREAM  =  6,  //unix sock stream
+};
+
+int netlib_socket_create(int type)
+{
+    int _domain;
+    int _type;
+
+    switch (type)
+    {
+    case SW_SOCK_TCP:
+        _domain = PF_INET;
+        _type = SOCK_STREAM;
+        break;
+    case SW_SOCK_TCP6:
+        _domain = PF_INET6;
+        _type = SOCK_STREAM;
+        break;
+    case SW_SOCK_UDP:
+        _domain = PF_INET;
+        _type = SOCK_DGRAM;
+        break;
+    case SW_SOCK_UDP6:
+        _domain = PF_INET6;
+        _type = SOCK_DGRAM;
+        break;
+    case SW_SOCK_UNIX_DGRAM:
+        _domain = PF_UNIX;
+        _type = SOCK_DGRAM;
+        break;
+    case SW_SOCK_UNIX_STREAM:
+        _domain = PF_UNIX;
+        _type = SOCK_STREAM;
+        break;
+    default:
+        return -1;
+    }
+    return socket(_domain, _type, 0);
+}
+
+
+
+int netlib_listen(int type, char *host, int port, int backlog)
+{
+    int sock;
+    int option;
+    int ret;
+
+    struct sockaddr_in addr_in4;
+    struct sockaddr_in6 addr_in6;
+    struct sockaddr_un addr_un;
+
+    sock = netlib_socket_create(type);
+    if (sock < 0)
+    {
+        dbg_printf("create socket failed.\n");
+        return (-1);
+    }
+
+    option = 1;
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int)) < 0)
+    {
+        dbg_printf("setsockopt(SO_REUSEPORT) failed.\n");
+    }
+
+    //unix socket
+    if (type == SW_SOCK_UNIX_DGRAM || type == SW_SOCK_UNIX_STREAM)
+    {
+        bzero(&addr_un, sizeof(addr_un));
+        unlink(host);
+        addr_un.sun_family = AF_UNIX;
+        strcpy(addr_un.sun_path, host);
+        ret = bind(sock, (struct sockaddr*) &addr_un, sizeof(addr_un));
+    }
+    //IPv6
+    else if (type > SW_SOCK_UDP)
+    {
+        bzero(&addr_in6, sizeof(addr_in6));
+        inet_pton(AF_INET6, host, &(addr_in6.sin6_addr));
+        addr_in6.sin6_port = htons(port);
+        addr_in6.sin6_family = AF_INET6;
+        ret = bind(sock, (struct sockaddr *) &addr_in6, sizeof(addr_in6));
+    }
+    //IPv4
+    else
+    {
+        bzero(&addr_in4, sizeof(addr_in4));
+        inet_pton(AF_INET, host, &(addr_in4.sin_addr));
+        addr_in4.sin_port = htons(port);
+        addr_in4.sin_family = AF_INET;
+        ret = bind(sock, (struct sockaddr *) &addr_in4, sizeof(addr_in4));
+    }
+    //bind failed
+    if (ret < 0)
+    {
+        dbg_printf("bind(%s:%d) failed. Error: %s [%d]\n", host, port, strerror(errno), errno);
+        return -1;
+    }
+    if (type == SW_SOCK_UDP || type == SW_SOCK_UDP6 || type == SW_SOCK_UNIX_DGRAM)
+    {
+        return sock;
+    }
+    //listen stream socket
+    ret = listen(sock, backlog);
+    if (ret < 0)
+    {
+        dbg_printf("listen(%s:%d, %d) failed. Error: %s[%d]\n", host, port, backlog, strerror(errno), errno);
+        return -2;
+    }
+    netlib_fcntl_set_block(sock,1);
+    return sock;
+}
+
+
+int netlib_set_buffer_size(int fd, int buffer_size)
+{
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &buffer_size, sizeof(buffer_size)) < 0)
+    {
+        dbg_printf("setsockopt(%d, SOL_SOCKET, SO_SNDBUF, %d) failed.\n", fd, buffer_size);
+        return (-1);
+    }
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &buffer_size, sizeof(buffer_size)) < 0)
+    {
+        dbg_printf("setsockopt(%d, SOL_SOCKET, SO_RCVBUF, %d) failed.\n", fd, buffer_size);
+        return (-2);
+    }
+    return 0;
+}
+
+int netlib_set_timeout(int sock, double timeout)
+{
+    int ret;
+    struct timeval timeo;
+    timeo.tv_sec = (int) timeout;
+    timeo.tv_usec = (int) ((timeout - timeo.tv_sec) * 1000 * 1000);
+    ret = setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (void *) &timeo, sizeof(timeo));
+    if (ret < 0)
+    {
+        dbg_printf("setsockopt(SO_SNDTIMEO) failed. Error: %s[%d]\n", strerror(errno), errno);
+        return (-1);
+    }
+    ret = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (void *) &timeo, sizeof(timeo));
+    if (ret < 0)
+    {
+        dbg_printf("setsockopt(SO_RCVTIMEO) failed. Error: %s[%d]\n", strerror(errno), errno);
+        return (-2);
+    }
+    return 0;
+}
 
 

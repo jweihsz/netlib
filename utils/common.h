@@ -56,6 +56,10 @@
 #define NETLIB_LITTLE_ENDIAN		(0x01)
 #define NETLIB_BIG_ENDIAN			(0x02) 
 
+#define  EVENT_READ		(0x01<<1)
+#define  EVENT_WRITE	(0x01<<2)
+
+
 int  netlib_gethost_byteorder(void);
 int netlib_sock_pton(char * net_addres, struct sockaddr *sa);
 char * netlib_sock_ntop(struct sockaddr *sa);
@@ -67,5 +71,8 @@ int netlib_signal(int signo, void (*func)(int));
 int netlib_new_unix_socket(char * unix_sock_path);
 int netlib_get_openfile_max(void);
 int netlib_rand(int min,int max);
+int netlib_fcntl_set_block(int sock,int nonblock);
+int netlib_socket_wait(int fd, int timeout_ms, int events);
+int netlib_set_buffer_size(int fd, int buffer_size);
 
 #endif /*_COMMON_H*/
