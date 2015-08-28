@@ -2,6 +2,9 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/eventfd.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 
 #undef  	DBG_ON
 #undef  	FILE_NAME
@@ -277,6 +280,141 @@ int swPipeUnsock_create(pipe_fun_t *p, int blocking, int protocol)
     return 0;
 }
 
+
+
+
+
+
+
+typedef struct queue_data
+{
+    long mtype; 
+    char mdata[10]; 
+} queue_data_t;
+
+typedef struct queue_msg
+{
+    int msg_id;
+    int ipc_wait;
+    uint8_t delete;
+    long type;
+} queue_msg_t;
+
+
+typedef struct queue
+{
+    void *object;
+    int blocking;
+    int (*in)(struct queue *, queue_data_t *in, int data_length);
+    int (*out)(struct queue *, queue_data_t *out, int buffer_length);
+    void (*free)(struct queue *);
+    int (*notify)(struct queue *);
+    int (*wait)(struct queue *);
+} queue_t;
+
+
+void queue_msg_free(queue_t *p)
+{
+    queue_msg_t *object = p->object;
+    if (object->delete)
+    {
+        msgctl(object->msg_id, IPC_RMID, 0);
+    }
+    free(object);
+}
+
+
+void queue_msg_set_blocking(queue_t *p, uint8_t blocking)
+{
+    queue_msg_t *object = p->object;
+    object->ipc_wait = blocking ? 0 : IPC_NOWAIT;
+}
+
+void queue_msg_set_destory(queue_t *p, uint8_t destory)
+{
+    queue_msg_t *object = p->object;
+    object->delete = destory;
+}
+
+
+
+int queue_msg_out(queue_t *p, queue_data_t *data, int length)
+{
+    queue_msg_t *object = p->object;
+
+    int flag = object->ipc_wait;
+    long type = data->mtype;
+
+    return msgrcv(object->msg_id, data, length, type, flag);
+}
+
+int queue_msg_in(queue_t *p, queue_data_t *in, int length)
+{
+    int ret;
+    queue_msg_t *object = p->object;
+
+    while (1)
+    {
+        ret = msgsnd(object->msg_id, in, length, object->ipc_wait);
+
+        if (ret < 0)
+        {
+            if (errno == EINTR)
+            {
+                continue;
+            }
+            else if (errno == EAGAIN)
+            {
+                sched_yield();
+                continue;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+        else
+        {
+            return ret;
+        }
+    }
+    return 0;
+}
+
+
+int queue_msg_create(queue_t *p, int blocking, key_t msg_key, long type)
+{
+    int msg_id;
+    queue_msg_t *object = malloc(sizeof(queue_msg_t));
+    if (object == NULL)
+    {
+        return -1;
+    }
+    if (blocking == 0)
+    {
+        object->ipc_wait = IPC_NOWAIT;
+    }
+    else
+    {
+        object->ipc_wait = 0;
+    }
+    p->blocking = blocking;
+    msg_id = msgget(msg_key, IPC_CREAT | O_EXCL | 0666);
+    if (msg_id < 0)
+    {
+        return -1;
+    }
+    else
+    {
+        object->msg_id = msg_id;
+        object->type = type;
+        p->object = object;
+        p->in = queue_msg_in;
+        p->out = queue_msg_out;
+        p->free = queue_msg_free;
+    }
+    return 0;
+}
 
 
 
