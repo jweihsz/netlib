@@ -35,4 +35,7 @@ all:
 05_ping:
 	gcc -o  05_ping  -I./utils ./test/05_ping.c ./utils/common.c  -lpthread
 
+ringqueue:
+	gcc -o  ringqueue  -I./utils ./test/ringqueue.c ./utils/common.c  -lpthread
+
 
