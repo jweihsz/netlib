@@ -60,6 +60,11 @@
 #define  EVENT_WRITE	(0x01<<2)
 
 
+#define  compare_and_swap(lock,old,set)		__sync_bool_compare_and_swap(lock,old,set)
+#define  fetch_and_add(value,add)			__sync_fetch_and_add(value,add)
+#define	 fetch_and_sub(value,sub)			__sync_fetch_and_sub(value,sub)	
+
+
 int  netlib_gethost_byteorder(void);
 int netlib_sock_pton(char * net_addres, struct sockaddr *sa);
 char * netlib_sock_ntop(struct sockaddr *sa);
