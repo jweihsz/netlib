@@ -51,7 +51,7 @@ struct ha_network_base{
 
 	int (*tcp_handler)(char *, char * ,struct ha_packet_info *);
 	int (*udp_handler)(char *,char *,struct ha_packet_info *);
-	struct hash_table *noblock_ips;	
+	struct hash_table *noblock_ips;	  /*这些ip地址是不进行过滤，让其按原来的请求进行*/
 	struct ha_event *ha_ev;
 	char buf[4096] __attribute__ ((aligned));
 	int  nbuf;

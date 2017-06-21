@@ -31,6 +31,17 @@ char *ha_trisection_header(char *start,char *end,cstr_t *result3)
 }
 
 /*对头部进行分析*/
+/*
+GET 
+/message/updateTime?tags=commontags&updateTime=d751713988987e9331980363e24189ce1497974701232 
+HTTP/1.1
+Content-Length: 4
+User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; WOW64; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; .NET4.0C; .NET4.0E; Media Center PC 6.0; GWX:DOWNLOADED; GWX:RESERVED)
+Host: api.foxitreader.cn
+Cache-Control: no-cache
+
+
+*/
 static char *ha_analysis_http_header(char *start,char *end,struct ha_http_request *stat,int *type)
 {
 	char *orig_s = start;
@@ -58,6 +69,15 @@ uint ha_analysis_http_line(char *start,char *end,
 											struct keyval *lines,uint n)
 {
 	uint i;
+
+
+	 /*
+	  比如:
+	  Host: api.foxitreader.cn
+	  Cache-Control: no-cache
+	 */
+	 
+	/*这点是不是可以优化?读取一行然后再分析*/
 	/*Fix:strip space*/
 	for (i = 0 ; start < end && i < n ; i++) {
 
@@ -175,13 +195,14 @@ int http_escape(char *start,int slen,const char *src,int len)
 	return pos;
 }
 
+/*从KEY值对中读取目标值*/
 cstr_t *proto_b51_shot(struct ha_http_request *req,char *key,uint len)
 {
 	return proto_m4_shot(req->lines,req->nline,key,len);
 }
 
 /*对截获的http数据进行分析*/
-bool proto_ak47_bang(char *start,char *end,struct ha_http_request *stat,int *http_type)
+bool proto_ak47_bang(char *start,char *end,struct ha_http_request *stat/*承载返回值*/,int *http_type)
 {
 	char *pos = ha_analysis_http_header(start,end,stat,http_type);
 	if (pos == start) 

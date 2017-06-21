@@ -231,13 +231,13 @@ bool ha_build_redir_args(struct ha_http_request *req,cstr_t *agent,const char *o
 }
 
 
-
+/*检测目标ip地址是否在不进行过滤的列表中*/
 static bool ignore_server_suffix(cstr_t *host,struct ha_packet_info * pi)
 {
 	struct ha_string_entry *pos;
 	list_for_each_entry (pos,&p_ctl.suffix_srv,next) {
-		if (ha_network_addr_check(pi->nh.iph->daddr)) { /*已经在非阻塞列表 */
-			return true;
+		if (ha_network_addr_check(pi->nh.iph->daddr)) {  /*检查是否在非阻塞列表*/
+			return true; /*如果是，直接跳出*/
 		}
 		if (ha_string_suffix_cmp(pos,host))  /*地址对比 */
 			return true;
@@ -285,12 +285,13 @@ static int ha_analysis_http_request(char *text, char *end,struct ha_packet_info 
 	dbg_printf("%s\n",text);
 
 
-	if (!proto_ak47_bang(text,end,req,&type))
+	if (!proto_ak47_bang(text,end,req,&type))  /*对抓取的数据进行解析*/
 		return -1;
 
 	/*too long url*/
 
-	if (type == HTTP_GET) { 
+	/*jweih:如果这里仅仅是要Host、Referer等这些特定的几个值，前面解析行的时候就没必要全部去解析了 */
+	if (type == HTTP_GET) {  /*如果是GET请求*/
 		req->host = proto_b51_shot(req,"Host",4);
 		if (!req->host)
 			return -1;
@@ -302,7 +303,7 @@ static int ha_analysis_http_request(char *text, char *end,struct ha_packet_info 
 			服务器基此可以获得一些信息用于处理
 
 		*/
-		req->refer = proto_b51_shot(req,"Referer",7);
+		req->refer = proto_b51_shot(req,"Referer",7); /*从那个页面进行跳转*/
 		if (!req->refer)
 			req->refer = &refer_none;
 
