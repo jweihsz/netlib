@@ -233,7 +233,7 @@ void ha_event_init(void)
 	ctl->epfd = fd;
 	
 	int i;
-	for (i = 0 ; i < DEF_IO_EVENTS ; i++) /*全部进行添加*/
+	for (i = 0 ; i < DEF_IO_EVENTS ; i++) /*空闲分配列表全部进行添加*/
 		alloctor_freelist_add(&ctl->ac_events,&ctl->ha_events[i].next);
 }
 

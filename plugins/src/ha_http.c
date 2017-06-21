@@ -179,6 +179,8 @@ cstr_t *proto_b51_shot(struct ha_http_request *req,char *key,uint len)
 {
 	return proto_m4_shot(req->lines,req->nline,key,len);
 }
+
+/*对截获的http数据进行分析*/
 bool proto_ak47_bang(char *start,char *end,struct ha_http_request *stat,int *http_type)
 {
 	char *pos = ha_analysis_http_header(start,end,stat,http_type);

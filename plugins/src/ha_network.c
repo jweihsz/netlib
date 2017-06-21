@@ -27,6 +27,13 @@
 #include "ha_http.h"
 #include "ha_event.h"
 
+#include "common.h"
+
+#define 	DBG_ON  		(0x01)
+#define 	FILE_NAME 		"ha_network:"
+
+
+
 #ifndef uchar
 typedef unsigned char uchar;
 #endif
@@ -449,13 +456,28 @@ static bool _ha_network_init(const char *iface)
 #endif
 
 
-#if 0  /*jweih*/	
-	assert (0 == ioctl(tmp_sock,SIOCGIFFLAGS,&ifr));   /*获取接口标志*/
+#if 1  /*jweih*/	
+
+	int ret = -1;
+	ret = ioctl(tmp_sock,SIOCGIFFLAGS,&ifr);
+	if(0 != ret){
+
+		debug_p("get SIOCGIFFLAGS falg is fail!\n");
+		return(false);
+	}
 	ifr.ifr_flags |= IFF_PROMISC;  /*设置成混杂模式*/
-	assert (0 == ioctl(tmp_sock,SIOCSIFFLAGS,&ifr));	
 
+	ret = ioctl(tmp_sock,SIOCSIFFLAGS,&ifr);
+	if(0 != ret){
+
+		dbg_printf("set SIOCSIFFLAGS flag is fail!\n");
+		return(false);
+	}else{
+
+		dbg_printf("the net device enter into  monitor mode !\n");
+	}
+	
 #endif
-
 
 	close(tmp_sock);	
 	return true;
@@ -468,9 +490,29 @@ bool ha_network_init()
 	const char *iface = ha_json_get_global_string("interface"); /*获取网络接口*/
 	if (!iface)
 		iface = "br-lan";
+
+	#if 0  /*jweih*/
+
+	while (!_ha_network_init(iface)) ;
+
+
+	#else
+
+	/*three times*/
+	int ret =  -1;
+	ret  = _ha_network_init(iface);
+
+	if(true != ret){
+
+		dbg_printf("_ha_network_init is fail!\n");		
+	}else{
+
+		dbg_printf("_ha_network_init is ok!\n");
+		
+	}
 	
-	while (!_ha_network_init(iface)) 
-		;
+
+	#endif
 		
 	return true;
 }

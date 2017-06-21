@@ -216,7 +216,7 @@ void ha_timer_init(void)
 		.read_cb = ha_timer_process,
 		.arg = ctl,
 	};
-	ctl->ha_ev = ha_event_new(ctl->tmfd,EV_READ,&cb);
+	ctl->ha_ev = ha_event_new(ctl->tmfd,EV_READ,&cb); /*定时器添加到监控中*/
 	assert(ctl->ha_ev);
 	
 #endif

@@ -66,9 +66,11 @@ static void ha_prepare(const char *file)
 {    
     ha_config_init(file); /*这里是初始化配置文件 */
 
-    ha_event_init();
-    ha_timer_init();
+    ha_event_init(); /*事件监控器初始化 */
+    ha_timer_init(); /*定时器初始化*/
 
+	dbg_printf("ha_prepare  prepare the socket !\n");
+	
     ha_network_init();
 
     ha_policy_init();

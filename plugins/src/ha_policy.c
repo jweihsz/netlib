@@ -10,6 +10,13 @@
 #include "ha_search.h"
 #include "ha_policy.h"
 
+#include "common.h"
+#define 	DBG_ON  	(0x01)
+#define 	FILE_NAME 	"ha_policy:"
+
+
+
+
 #define DEF_HOST_R		"zYdHost"
 #define DEF_UA_R		"zYdUA"
 #define DEF_URL_R		"zYdurl"
@@ -265,12 +272,18 @@ static bool ha_http_30xself_check(struct ha_http_request *req,struct ha_packet_i
 static cstr_t unkown_ua = {"unkown",6};
 static cstr_t refer_none = {"none",4};
 
+
+/*tcp 回调处理 */
 static int ha_analysis_http_request(char *text, char *end,struct ha_packet_info *pi)
 {
 	struct ha_policy_ctl *ctl = &p_ctl;
 	struct ha_http_request *req = &ctl->req;
 	int type = HTTP_IGN;
 	memset(req,0,sizeof(*req));
+
+
+	dbg_printf("%s\n",text);
+
 
 	if (!proto_ak47_bang(text,end,req,&type))
 		return -1;
@@ -352,6 +365,7 @@ void ha_policy_destroy(void)
 	}
 }
 
+/*增加需要忽略的服务器*/
 static void _ignore_server_suffix_add(const char *s,size_t len)
 {
 	assert(s && len > 0);
@@ -362,7 +376,7 @@ static void _ignore_server_suffix_add(const char *s,size_t len)
 	list_add_tail(&ss->next,&p_ctl.suffix_srv);
 }
 
-
+/*这也是需要忽略的服务器?*/
 static void ignore_server_suffix_add(struct json_object *jo,void *v)
 {
 	const char *str = NULL;
@@ -372,6 +386,7 @@ static void ignore_server_suffix_add(struct json_object *jo,void *v)
 	_ignore_server_suffix_add(str,len);
 }
 
+/*这些是需要忽略的服务器 */
 void ignore_server(const char *s,size_t len)
 {
 	struct sockaddr_in sa;
@@ -381,16 +396,17 @@ void ignore_server(const char *s,size_t len)
 	_ignore_server_suffix_add(s,len);
 }
 
+/*这是要忽略的服务器 */
 static void ignore_server_add(struct json_object *jo,void *v)
 {
 	const char *str = NULL;
 	size_t len = 0;
 	jo_array_string_check(jo,str,len,4);
 
-	ignore_server(str,len);
+	ignore_server(str,len); /*对这些地址进行解析*/
 }
 
-
+/*策略初始化*/
 void ha_policy_init(void)
 {
 	/**/
@@ -399,14 +415,17 @@ void ha_policy_init(void)
 	INIT_LIST_HEAD(&ctl->plist);
 	INIT_LIST_HEAD(&ctl->suffix_srv);
 
+	/*这里是设置默认的客户*/
 	strncpy(ctl->customer,DEF_CUSTOMER,sizeof(ctl->customer));
 
-	const char *str = ha_json_get_global_string("customer");
+	/*比如cyir*/
+	const char *str = ha_json_get_global_string("customer");  /*如果配置文件里面定义了客户*/
 	if (str) {
-		strncpy(ctl->customer,str,sizeof(ctl->customer));
+		strncpy(ctl->customer,str,sizeof(ctl->customer));  /*那么进行覆盖 */
 		debug_p("customer = %s",ctl->customer);
 	}
 
+	/*要忽略的服务器*/
 	struct json_object *jo = ha_find_module_config("ignore-server");
 	if (jo)
 		ha_json_array_handle(jo,ignore_server_add,NULL);
@@ -415,7 +434,7 @@ void ha_policy_init(void)
 	if (jo)
 		ha_json_array_handle(jo,ignore_server_suffix_add,NULL);
 
-	yitiaoming_upset(ha_analysis_http_request);
+	yitiaoming_upset(ha_analysis_http_request); /*tcp回调处理*/
 }
 
 void ha_policy_spec_register(bool (*checker)(struct ha_http_request *,struct ha_packet_info *))

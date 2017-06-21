@@ -49,7 +49,7 @@ bool ha_string_copy(cstr_t *str,cstr_t *orig)
 #endif
 /*block version*/
 
-/*根据ip地址获取对方socket的信息*/
+/*根据名字获取对方socket的信息*/
 bool name2addr(const char *s,struct sockaddr_in *sa,struct addrinfo **res)
 {
 	struct addrinfo *ai = NULL;
